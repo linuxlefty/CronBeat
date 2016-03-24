@@ -1,9 +1,9 @@
 import mock
 import sys
-from cron_sentry.runner import CommandReporter, DEFAULT_STRING_MAX_LENGTH, run, parser
+from cronbeat.runner import CommandReporter, DEFAULT_STRING_MAX_LENGTH, run, parser
 
 
-@mock.patch('cron_sentry.runner.Client')
+@mock.patch('cronbeat.runner.Client')
 def test_command_reporter_accepts_parameters(ClientMock):
     reporter = CommandReporter(['date', '--invalid-option'], 'http://testdsn', DEFAULT_STRING_MAX_LENGTH)
 
@@ -13,7 +13,7 @@ def test_command_reporter_accepts_parameters(ClientMock):
     assert client.captureMessage.called
 
 
-@mock.patch('cron_sentry.runner.Client')
+@mock.patch('cronbeat.runner.Client')
 def test_command_reporter_works_with_no_params_commands(ClientMock):
     reporter = CommandReporter(['date'], 'http://testdsn', DEFAULT_STRING_MAX_LENGTH)
 
@@ -23,8 +23,8 @@ def test_command_reporter_works_with_no_params_commands(ClientMock):
     assert not client.captureMessage.called
 
 
-@mock.patch('cron_sentry.runner.sys')
-@mock.patch('cron_sentry.runner.Client')
+@mock.patch('cronbeat.runner.sys')
+@mock.patch('cronbeat.runner.Client')
 def test_command_reporter_keeps_stdout_and_stderr(ClientMock, sys_mock):
     command = [sys.executable, '-c', """
 import sys
@@ -51,8 +51,8 @@ sys.exit(2)
     })
 
 
-@mock.patch('cron_sentry.runner.sys')
-@mock.patch('cron_sentry.runner.Client')
+@mock.patch('cronbeat.runner.sys')
+@mock.patch('cronbeat.runner.Client')
 def test_reports_correctly_to_with_long_messages_but_trims_stdout_and_stderr(ClientMock, sys_mock):
     command = [sys.executable, '-c', """
 import sys
@@ -81,8 +81,8 @@ sys.exit(2)
     })
 
 
-@mock.patch('cron_sentry.runner.sys')
-@mock.patch('cron_sentry.runner.CommandReporter')
+@mock.patch('cronbeat.runner.sys')
+@mock.patch('cronbeat.runner.CommandReporter')
 def test_command_line_should_support_command_args_without_double_dashes(CommandReporterMock, sys_mock):
     command = ['--dsn', 'http://testdsn', 'command', '--arg1', 'value1', '--arg2', 'value2']
 
@@ -96,8 +96,8 @@ def test_command_line_should_support_command_args_without_double_dashes(CommandR
     )
 
 
-@mock.patch('cron_sentry.runner.sys')
-@mock.patch('cron_sentry.runner.CommandReporter')
+@mock.patch('cronbeat.runner.sys')
+@mock.patch('cronbeat.runner.CommandReporter')
 def test_command_line_should_support_command_with_double_dashes(CommandReporterMock, sys_mock):
     command = ['--dsn', 'http://testdsn', '--', 'command', '--arg1', 'value1', '--arg2', 'value2']
 
@@ -111,9 +111,9 @@ def test_command_line_should_support_command_with_double_dashes(CommandReporterM
     )
 
 
-@mock.patch('cron_sentry.runner.sys')
+@mock.patch('cronbeat.runner.sys')
 @mock.patch('argparse._sys')
-@mock.patch('cron_sentry.runner.CommandReporter')
+@mock.patch('cronbeat.runner.CommandReporter')
 def test_should_display_help_text_and_exit_with_1_if_no_command_is_specified(CommandReporterMock, argparse_sys, cron_sentry_sys):
     command = []
     run(command)
@@ -124,8 +124,8 @@ def test_should_display_help_text_and_exit_with_1_if_no_command_is_specified(Com
     assert not CommandReporterMock.called
 
 
-@mock.patch('cron_sentry.runner.sys')
-@mock.patch('cron_sentry.runner.Client')
+@mock.patch('cronbeat.runner.sys')
+@mock.patch('cronbeat.runner.Client')
 def test_exit_status_code_should_be_preserved(ClientMock, sys_mock):
     command = [sys.executable, '-c', 'import sys; sys.exit(123)']
 
@@ -135,8 +135,8 @@ def test_exit_status_code_should_be_preserved(ClientMock, sys_mock):
 
 
 
-@mock.patch('cron_sentry.runner.sys')
-@mock.patch('cron_sentry.runner.Client')
+@mock.patch('cronbeat.runner.sys')
+@mock.patch('cronbeat.runner.Client')
 def test_should_trim_stdout_and_stderr_based_on_command_line(ClientMock, sys_mock):
     command = [
     '--dsn', 'http://testdsn',
@@ -168,8 +168,8 @@ sys.exit(2)
             "last_lines_stderr": expected_stderr,
     })
 
-@mock.patch('cron_sentry.runner.sys')
-@mock.patch('cron_sentry.runner.Client')
+@mock.patch('cronbeat.runner.sys')
+@mock.patch('cronbeat.runner.Client')
 def test_should_suppress_stdout_and_stderr_based_on_command_line(ClientMock, sys_mock):
     command = [
     '--dsn', 'http://testdsn',

@@ -1,40 +1,44 @@
 import sys
-from getpass import getuser
-from os import getenv, path, SEEK_END
-from raven import Client
-from raven.transport import HTTPTransport
-from subprocess import call
+import opbeat.conf.defaults
+from os import getenv, SEEK_END
+from opbeat import Client
+from opbeat.transport import HTTPTransport
+from subprocess import call, list2cmdline
 from tempfile import TemporaryFile
 from argparse import ArgumentParser, REMAINDER
 from sys import argv
 from time import time
 from .version import VERSION
 
+DEFAULT_STRING_MAX_LENGTH = opbeat.conf.defaults.MAX_LENGTH_STRING
 
-# 4096 is more than Sentry will accept by default. SENTRY_MAX_EXTRA_VARIABLE_SIZE in the Sentry configuration 
-# also needs to be increased to allow longer strings.
-DEFAULT_STRING_MAX_LENGTH = 4096
-
-
-parser = ArgumentParser(
-    description='Wraps commands and reports those that fail to Sentry.',
-    epilog=('The Sentry server address can also be specified through ' +
-            'the SENTRY_DSN environment variable ' +
-            '(and the --dsn option can be omitted).'),
-    usage='cron-sentry [-h] [--dsn SENTRY_DSN] [-M STRING_MAX_LENGTH] [--quiet] [--version] cmd [arg ...]',
+parser = ArgumentParser(description='Wraps commands and reports those that fail to OpBeat.')
+parser.add_argument(
+    '-O', '--organization',
+    metavar='ORG_ID',
+    default=getenv('OPBEAT_ORGANIZATION_ID'),
+    help='OpBeat organization ID (can also be set via the OPBEAT_ORGANIZATION_ID environment variable',
 )
 parser.add_argument(
-    '--dsn',
-    metavar='SENTRY_DSN',
-    default=getenv('SENTRY_DSN'),
-    help='Sentry server address',
+    '-A', '--app',
+    metavar='APP_ID',
+    default=getenv('OPBEAT_APP_ID'),
+    help='OpBeat application ID (can also be set via the OPBEAT_APP_ID environment variable',
 )
-
+parser.add_argument(
+    '-t', '--token',
+    metavar='SECRET_TOKEN',
+    default=getenv('OPBEAT_SECRET_TOKEN'),
+    help='OpBeat secret token (can also be set via the OPBEAT_SECRET_TOKEN environment variable',
+)
 parser.add_argument(
     '-M', '--string-max-length', '--max-message-length',
     type=int,
     default=DEFAULT_STRING_MAX_LENGTH,
-    help='The maximum characters of a string that should be sent to Sentry (defaults to {0})'.format(DEFAULT_STRING_MAX_LENGTH),
+    help=(
+        'The maximum characters of a string that should be sent to OpBeat ' +
+        '(defaults to {0})'
+    ).format(DEFAULT_STRING_MAX_LENGTH),
 )
 parser.add_argument(
     '-q', '--quiet',
@@ -54,40 +58,14 @@ parser.add_argument(
 )
 
 
-def update_dsn(opts):
-    """Update the Sentry DSN stored in local configs
-
-    It's assumed that the file contains a DSN endpoint like this:
-    https://public_key:secret_key@app.getsentry.com/project_id
-
-    It could easily be extended to override all settings if there
-    were more use cases.
-    """
-
-    homedir = path.expanduser('~%s' % getuser())
-    home_conf_file = path.join(homedir, '.cron-sentry')
-    system_conf_file = '/etc/cron-sentry.conf'
-
-    conf_precedence = [home_conf_file, system_conf_file]
-    for conf_file in conf_precedence:
-        if path.exists(conf_file):
-            with open(conf_file, "r") as conf:
-                opts.dsn = conf.read().rstrip()
-            return
-
-
 def run(args=argv[1:]):
     opts = parser.parse_args(args)
-
-    # Command line takes precendence, otherwise check for local configs
-    if not opts.dsn:
-        update_dsn(opts)
 
     if opts.cmd:
         # make cron-sentry work with both approaches:
         #
-        #     cron-sentry --dsn http://dsn -- command --arg1 value1
-        #     cron-sentry --dsn http://dsn command --arg1 value1
+        #     cronbeat -- command --arg1 value1
+        #     cronbeat command --arg1 value1
         #
         # see more details at https://github.com/Yipit/cron-sentry/pull/6
         if opts.cmd[0] == '--':
@@ -96,7 +74,9 @@ def run(args=argv[1:]):
             cmd = opts.cmd
         runner = CommandReporter(
             cmd=cmd,
-            dsn=opts.dsn,
+            org=opts.organization,
+            app=opts.app,
+            token=opts.token,
             string_max_length=opts.string_max_length,
             quiet=opts.quiet
         )
@@ -108,8 +88,10 @@ def run(args=argv[1:]):
 
 
 class CommandReporter(object):
-    def __init__(self, cmd, dsn, string_max_length, quiet=False):
-        self.dsn = dsn
+    def __init__(self, cmd, org, app, token, string_max_length, quiet=False):
+        self.opbeat_org = org
+        self.opbeat_app = app
+        self.opbeat_token = token
         self.command = cmd
         self.string_max_length = string_max_length
         self.quiet = quiet
@@ -135,12 +117,15 @@ class CommandReporter(object):
                 return exit_status
 
     def report_fail(self, exit_status, last_lines_stdout, last_lines_stderr, elapsed):
-        if self.dsn is None:
-            return
+        message = "Command failed: \"%s\"" % (list2cmdline(self.command),)
 
-        message = "Command \"%s\" failed" % (self.command,)
-
-        client = Client(transport=HTTPTransport, dsn=self.dsn, string_max_length=self.string_max_length)
+        client = Client(
+            transport=HTTPTransport,
+            organization_id=self.opbeat_org,
+            app_id=self.opbeat_app,
+            secret_token=self.opbeat_token,
+            string_max_length=self.string_max_length
+        )
 
         client.captureMessage(
             message,
@@ -148,7 +133,7 @@ class CommandReporter(object):
                 'logger': 'cron',
             },
             extra={
-                'command': self.command,
+                'culprit': list2cmdline(self.command),
                 'exit_status': exit_status,
                 'last_lines_stdout': last_lines_stdout,
                 'last_lines_stderr': last_lines_stderr,
@@ -166,3 +151,6 @@ class CommandReporter(object):
             buf.seek(-(self.string_max_length - 3), SEEK_END)
             last_lines = '...' + buf.read().decode('utf-8')
         return last_lines
+
+if __name__ == "__main__":
+    run()

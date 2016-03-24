@@ -1,36 +1,42 @@
-Cron-Sentry: error reporting to [Sentry](https://getsentry.com/) of commands run via cron
+CronBeat: error reporting to [OpBeat](https://opbeat.com/) of commands run via cron
 ================================================
 
-Cron-Sentry is a python command-line wrapper that reports errors to [Sentry](http://getsentry.com) (using [raven](https://github.com/getsentry/raven-python)) if the called script exits with a status other than zero.
+CronBeat is a python command-line wrapper that reports errors to [OpBeat](http://opbeat.com) (using [opbeat](https://github.com/opbeat/opbeat_python)) if the called script exits with a status other than zero.
 
 Install
 -------
 
-`pip install cron-sentry`
+`pip install https://github.com/linuxlefty/CronBeat/archive/master.zip`
 
 Usage
 -----
 
 ```
-$ cron-sentry --help
-usage: cron-sentry [-h] [--dsn SENTRY_DSN] [-M STRING_MAX_LENGTH] [--quiet] [--version] cmd [arg ...]
+usage: runner.py [-h] [-O ORG_ID] [-A APP_ID] [-t SECRET_TOKEN]
+                 [-M STRING_MAX_LENGTH] [-q] [--version]
+                 ...
 
-Wraps commands and reports those that fail to Sentry.
+Wraps commands and reports those that fail to OpBeat.
 
 positional arguments:
   cmd                   The command to run
 
 optional arguments:
   -h, --help            show this help message and exit
-  --dsn SENTRY_DSN      Sentry server address
+  -O ORG_ID, --organization ORG_ID
+                        OpBeat organization ID (can also be set via the
+                        OPBEAT_ORGANIZATION_ID environment variable
+  -A APP_ID, --app APP_ID
+                        OpBeat application ID (can also be set via the
+                        OPBEAT_APP_ID environment variable
+  -t SECRET_TOKEN, --token SECRET_TOKEN
+                        OpBeat secret token (can also be set via the
+                        OPBEAT_SECRET_TOKEN environment variable
   -M STRING_MAX_LENGTH, --string-max-length STRING_MAX_LENGTH, --max-message-length STRING_MAX_LENGTH
                         The maximum characters of a string that should be sent
-                        to Sentry (defaults to 4096)
+                        to OpBeat (defaults to 400)
   -q, --quiet           suppress all command output
   --version             show program's version number and exit
-
-The Sentry server address can also be specified through the SENTRY_DSN
-environment variable (and the --dsn option can be omitted).
 ```
 
 Example
@@ -46,7 +52,7 @@ SENTRY_DSN=https://<your_key>:<your_secret>@app.getsentry.com/<your_project_id>
 License
 -------
 
-This project started life as [raven-cron](https://github.com/mediacore/raven-cron) by MediaCore Technologies.
+This project is based off of the excellent [cron-sentry](https://github.com/Yipit/cron-sentry) by Yipit Inc.
 
-Original copyright 2013 to MediaCore Technologies (MIT license).
-Copyright 2015 to Yipit Inc. (MIT license).
+Original copyright 2015 to Yipit Inc. (MIT license).
+Copyright 2016 to Peter Naudus. (MIT license).
