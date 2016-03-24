@@ -44,8 +44,11 @@ Example
 
 `crontab -e`
 ```
-SENTRY_DSN=https://<your_key>:<your_secret>@app.getsentry.com/<your_project_id>
-0 4 * * * cron-sentry my-process --arg arg2
+OPBEAT_ORGANIZATION_ID=<your_org_id>
+OPBEAT_APP_ID=<your_app_id>
+OPBEAT_SECRET_TOKEN=<your_secret_token>
+
+0 4 * * * cronbeat my-process --arg arg2
 ```
 
 
@@ -55,4 +58,5 @@ License
 This project is based off of the excellent [cron-sentry](https://github.com/Yipit/cron-sentry) by Yipit Inc.
 
 Original copyright 2015 to Yipit Inc. (MIT license).
+
 Copyright 2016 to Peter Naudus. (MIT license).
